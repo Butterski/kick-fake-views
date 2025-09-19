@@ -8,19 +8,10 @@ RUN apk add --no-cache git ca-certificates
 WORKDIR /app
 
 # Copy go mod files first (for better caching)
-COPY go.mod ./
+COPY go.mod go.sum ./
 
-# Copy go.sum if it exists, otherwise create empty one
-COPY go.su[m] ./
-
-# Initialize go.sum if it doesn't exist or is empty
-RUN touch go.sum
-
-# Download dependencies with retry logic
-RUN go mod download || (echo "Retrying download..." && sleep 5 && go mod download) || (echo "Final retry..." && sleep 10 && go mod download)
-
-# Ensure dependencies are properly resolved
-RUN go mod tidy
+# Download dependencies with proper error handling
+RUN go mod download && go mod verify
 
 # Copy source code
 COPY . .

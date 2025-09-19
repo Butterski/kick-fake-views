@@ -1,0 +1,32 @@
+# Ignore build artifacts
+kick-bot.exe
+kick-bot
+
+# Ignore development files
+.git
+.gitignore
+readme.md
+
+# Ignore logs
+*.log
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore Python files (we only need Go)
+*.py
+__pycache__/
+
+# Don't ignore go files and necessary configs
+!go.mod
+!go.sum
+!internal/
+!cmd/
+!proxies.txt
+!Dockerfile
+!docker-compose.yml
