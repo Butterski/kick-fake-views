@@ -1,0 +1,17 @@
+# Docker Compose for development
+version: '3.8'
+
+services:
+  kick-bot:
+    build: .
+    container_name: kick-bot
+    restart: unless-stopped
+    volumes:
+      # Mount proxies.txt from host to container
+      - ./proxies.txt:/app/proxies.txt:ro
+    stdin_open: true
+    tty: true
+    environment:
+      - LOG_LEVEL=info
+    # Uncomment the following lines if you want to override the command
+    # command: ["./kick-bot"]
