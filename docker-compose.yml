@@ -1,5 +1,4 @@
 # Docker Compose for development
-version: '3.8'
 
 services:
   kick-bot:

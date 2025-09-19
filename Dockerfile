@@ -7,17 +7,26 @@ RUN apk add --no-cache git ca-certificates
 # Set working directory
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy go mod files first (for better caching)
+COPY go.mod ./
 
-# Download dependencies
-RUN go mod download
+# Copy go.sum if it exists, otherwise create empty one
+COPY go.su[m] ./
+
+# Initialize go.sum if it doesn't exist or is empty
+RUN touch go.sum
+
+# Download dependencies with retry logic
+RUN go mod download || (echo "Retrying download..." && sleep 5 && go mod download) || (echo "Final retry..." && sleep 10 && go mod download)
+
+# Ensure dependencies are properly resolved
+RUN go mod tidy
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kick-bot ./cmd/kick-bot
+# Build the application with static linking
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o kick-bot ./cmd/kick-bot
 
 # Final stage - minimal runtime image
 FROM alpine:latest

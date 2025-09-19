@@ -1,9 +1,7 @@
 package kick
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -156,17 +154,10 @@ func (s *Service) GetToken() (string, string, error) {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode == 200 {
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				s.logger.WithError(err).Error("Failed to read token response body")
-				continue
-			}
-
 			var tokenResp TokenResponse
-			if err := json.Unmarshal(body, &tokenResp); err != nil {
+			if err := resp.JSON(&tokenResp); err != nil {
 				s.logger.WithError(err).Error("Failed to parse token response")
 				continue
 			}
