@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -20,6 +18,14 @@ const (
 	defaultProxyFile = "proxies.txt"
 )
 
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func main() {
 	// Initialize logger
 	log := logger.NewTextLogger()
@@ -34,25 +40,19 @@ func main() {
 	// Initialize Kick service
 	kickService := kick.NewService(proxyManager, log)
 
-	// Get user input for channel
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Channel link or name: ")
-	channelInput, err := reader.ReadString('\n')
-	if err != nil {
-		log.WithError(err).Fatal("Failed to read channel input")
+	// Get configuration from environment variables
+	channelInput := getEnvOrDefault("KICK_CHANNEL", "")
+	if channelInput == "" {
+		log.Fatal("KICK_CHANNEL environment variable is required")
 	}
 	channelName := strings.TrimSpace(channelInput)
 	channelName = kick.ExtractChannelName(channelName)
 
-	// Get user input for number of viewers
-	fmt.Print("How many viewers to send: ")
-	viewersInput, err := reader.ReadString('\n')
+	// Get number of viewers from environment
+	viewersStr := getEnvOrDefault("KICK_VIEWERS", "100")
+	totalViewers, err := strconv.Atoi(strings.TrimSpace(viewersStr))
 	if err != nil {
-		log.WithError(err).Fatal("Failed to read viewers input")
-	}
-	totalViewers, err := strconv.Atoi(strings.TrimSpace(viewersInput))
-	if err != nil {
-		log.WithError(err).Fatal("Invalid number of viewers")
+		log.WithError(err).Fatal("Invalid KICK_VIEWERS value, must be a number")
 	}
 
 	if totalViewers <= 0 {

@@ -1,4 +1,4 @@
-# Docker Compose for development
+# Docker Compose for Kick Bot
 
 services:
   kick-bot:
@@ -8,9 +8,12 @@ services:
     volumes:
       # Mount proxies.txt from host to container
       - ./proxies.txt:/app/proxies.txt:ro
-    stdin_open: true
-    tty: true
+    env_file:
+      # Load environment variables from .env file (create from .env.example)
+      - .env
     environment:
-      - LOG_LEVEL=info
-    # Uncomment the following lines if you want to override the command
-    # command: ["./kick-bot"]
+      # Default values (can be overridden in .env file)
+      - KICK_CHANNEL=${KICK_CHANNEL:-xqc}
+      - KICK_VIEWERS=${KICK_VIEWERS:-500}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    # Note: No need for stdin_open/tty since this is now non-interactive

@@ -11,7 +11,36 @@ A Go-based bot for simulating viewers on Kick.com streams. This application crea
   
    _Tip: You can buy 100 proxies for less than $5 at [webshare.io](https://www.webshare.io/)_
 
-## Installation & Usage
+## Quick Start with Docker Compose
+
+1. **Create configuration file:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` file with your settings:**
+   ```bash
+   # Required: Kick channel name or URL
+   KICK_CHANNEL=xqc
+   
+   # Optional: Number of viewers (default: 100)
+   KICK_VIEWERS=500
+   
+   # Optional: Log level (default: info)
+   LOG_LEVEL=info
+   ```
+
+3. **Create your proxy list:**
+   Create `proxies.txt` with your proxies in format `ip:port:username:password`
+
+4. **Start the bot:**
+   ```bash
+   docker-compose up
+   ```
+
+That's it! The bot will start automatically with your configured settings.
+
+## Alternative Installation Methods
 
 ### Method 1: Local Go Installation
 
@@ -20,47 +49,59 @@ A Go-based bot for simulating viewers on Kick.com streams. This application crea
    go mod tidy
    ```
 
-2. **Build the application:**
+2. **Configure environment:**
    ```bash
-   go build -o kick-bot ./cmd/kick-bot
+   export KICK_CHANNEL=xqc
+   export KICK_VIEWERS=500
    ```
 
-3. **Run the application:**
+3. **Build and run:**
    ```bash
+   go build -o kick-bot ./cmd/kick-bot
    ./kick-bot
    ```
 
-### Method 2: Docker (Recommended)
+### Method 2: Docker Run
 
-1. **Build the Docker image:**
-   ```bash
-   docker build -t kick-bot .
-   ```
-
-2. **Run with Docker:**
-   ```bash
-   docker run -it --rm -v $(pwd)/proxies.txt:/app/proxies.txt kick-bot
-   ```
-
-### Method 3: Docker Compose
-
-1. **Run with Docker Compose:**
-   ```bash
-   docker-compose up --build
-   ```
+```bash
+docker build -t kick-bot .
+docker run --rm \
+  -v $(pwd)/proxies.txt:/app/proxies.txt \
+  -e KICK_CHANNEL=xqc \
+  -e KICK_VIEWERS=500 \
+  kick-bot
+```
 
 ## Configuration
 
-### Proxy File Format
-Create a `proxies.txt` file in the root directory with the following format:
-```
-ip1:port1:username1:password1
-ip2:port2:username2:password2
-ip3:port3:username3:password3
-```
+### Required Files
+
+1. **Proxy File (`proxies.txt`)**
+   Create in the root directory with format:
+   ```
+   ip1:port1:username1:password1
+   ip2:port2:username2:password2
+   ip3:port3:username3:password3
+   ```
+
+2. **Environment Configuration (`.env`)**
+   Copy from `.env.example` and configure:
+   ```bash
+   # Required: Kick channel name or URL
+   KICK_CHANNEL=your_channel_name
+   
+   # Optional: Number of viewers to send (default: 100)
+   KICK_VIEWERS=500
+   
+   # Optional: Log level (debug, info, warn, error)
+   LOG_LEVEL=info
+   ```
 
 ### Environment Variables
-- `LOG_LEVEL` - Set log level (debug, info, warn, error). Default: info
+
+- `KICK_CHANNEL` - **Required**: Kick channel name or full URL (e.g., "xqc" or "https://kick.com/xqc")
+- `KICK_VIEWERS` - **Optional**: Number of viewer connections to create (default: 100)
+- `LOG_LEVEL` - **Optional**: Log level (debug, info, warn, error). Default: info
 
 ## Project Structure
 
