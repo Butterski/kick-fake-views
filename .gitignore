@@ -1,5 +1,5 @@
 # Binaries
-kick-bot
+# kick-bot
 kick-bot.exe
 kick-bot-linux
 kick-bot-macos
@@ -24,7 +24,7 @@ Thumbs.db
 *.log
 
 # Proxy files (uncomment if you want to keep proxies.txt in git)
-# proxies.txt
+proxies.txt
 
 # Docker
 .dockerignore
