@@ -51,6 +51,41 @@ A Go-based bot for simulating viewers on Kick.com streams. This application crea
 
 ## Configuration
 
+### Command Line Options
+
+The application supports several command-line flags to customize behavior:
+
+```bash
+./kick-bot [OPTIONS]
+```
+
+**Available Options:**
+- `-slow`: Enable slow mode with batch processing and delays (default: false)
+- `-batch-size`: Number of connections to start per batch (default: 10)
+- `-batch-delay`: Delay in seconds between batches (default: 30)
+
+**Usage Examples:**
+
+```bash
+# Default mode - all connections start simultaneously (fastest)
+./kick-bot
+
+# Slow mode with default settings (10 connections per batch, 30s delay)
+./kick-bot -slow
+
+# Custom batch processing (5 connections per batch, 60s delay)
+./kick-bot -slow -batch-size=5 -batch-delay=60
+
+# Large batch with shorter delay (50 connections per batch, 15s delay)
+./kick-bot -slow -batch-size=50 -batch-delay=15
+```
+
+**When to use slow mode:**
+- To avoid overwhelming the target server
+- When using shared or rate-limited proxies
+- To maintain a more natural connection pattern
+- For better stability with large numbers of connections
+
 ### Proxy File Format
 Create a `proxies.txt` file in the root directory with the following format:
 ```
