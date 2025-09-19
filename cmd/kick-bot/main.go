@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,20 +11,39 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"kick-bot/internal/kick"
 	"kick-bot/internal/logger"
 	"kick-bot/internal/proxy"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	defaultProxyFile = "proxies.txt"
+	defaultProxyFile  = "proxies.txt"
+	defaultBatchSize  = 10
+	defaultBatchDelay = 30 // seconds
 )
 
 func main() {
+	// Define command line flags
+	var (
+		batchSize  = flag.Int("batch-size", defaultBatchSize, "Number of connections to start per batch")
+		batchDelay = flag.Int("batch-delay", defaultBatchDelay, "Delay in seconds between batches")
+		slowMode   = flag.Bool("slow", false, "Enable slow mode with batch processing and delays")
+	)
+	flag.Parse()
+
 	// Initialize logger
 	log := logger.NewTextLogger()
 	log.Info("Starting Kick Bot")
+
+	if *slowMode {
+		log.Infof("Slow mode enabled: batch size=%d, delay=%ds", *batchSize, *batchDelay)
+	} else {
+		log.Info("Fast mode: all connections will start simultaneously")
+	}
 
 	// Load proxies
 	proxyManager := proxy.NewProxyManager(log)
@@ -83,36 +103,13 @@ func main() {
 		cancel()
 	}()
 
-	// Start goroutines for each connection
+	// Start connections based on mode
 	var wg sync.WaitGroup
 
-	for i := 0; i < totalViewers; i++ {
-		wg.Add(1)
-
-		go func(index int) {
-			defer wg.Done()
-
-			// Get token for this connection
-			token, proxyURL, err := kickService.GetToken()
-			if err != nil {
-				log.WithError(err).Errorf("[%d] Failed to get token", index)
-				return
-			}
-
-			log.Infof("[%d] Got token: %s using proxy: %s", index, token, proxyURL)
-
-			// Create connection handler
-			handler := kick.NewConnectionHandler(index, channelID, token, proxyURL, log)
-
-			// Start connection
-			if err := handler.Start(ctx); err != nil {
-				if err == context.Canceled {
-					log.Infof("[%d] Connection stopped due to shutdown", index)
-				} else {
-					log.WithError(err).Errorf("[%d] Connection failed", index)
-				}
-			}
-		}(i)
+	if *slowMode {
+		startConnectionsInBatches(ctx, &wg, totalViewers, *batchSize, *batchDelay, kickService, channelID, log)
+	} else {
+		startAllConnectionsSimultaneously(ctx, &wg, totalViewers, kickService, channelID, log)
 	}
 
 	log.Info("All connections started. Press Ctrl+C to stop.")
@@ -120,4 +117,85 @@ func main() {
 	// Wait for all goroutines to finish
 	wg.Wait()
 	log.Info("All connections stopped. Exiting.")
+}
+
+// startConnectionsInBatches starts connections in batches with delays between them
+func startConnectionsInBatches(ctx context.Context, wg *sync.WaitGroup, totalViewers, batchSize, batchDelaySeconds int, kickService *kick.Service, channelID int, log *logrus.Logger) {
+	batchDelay := time.Duration(batchDelaySeconds) * time.Second
+
+	for i := 0; i < totalViewers; i += batchSize {
+		// Check if context is cancelled before starting a new batch
+		select {
+		case <-ctx.Done():
+			log.Info("Shutdown requested, stopping batch creation")
+			return
+		default:
+		}
+
+		end := i + batchSize
+		if end > totalViewers {
+			end = totalViewers
+		}
+
+		batchNum := (i / batchSize) + 1
+		totalBatches := (totalViewers + batchSize - 1) / batchSize
+
+		log.Infof("Starting batch %d/%d (connections %d-%d)...", batchNum, totalBatches, i+1, end)
+
+		// Start connections in this batch
+		for j := i; j < end; j++ {
+			wg.Add(1)
+			go startConnection(ctx, wg, j, kickService, channelID, log)
+		}
+
+		// Wait before starting next batch (except for the last batch)
+		if end < totalViewers {
+			log.Infof("Waiting %d seconds before next batch...", batchDelaySeconds)
+
+			// Use a timer with context cancellation support
+			timer := time.NewTimer(batchDelay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				log.Info("Shutdown requested during batch delay")
+				return
+			case <-timer.C:
+				// Continue to next batch
+			}
+		}
+	}
+}
+
+// startAllConnectionsSimultaneously starts all connections at once (original behavior)
+func startAllConnectionsSimultaneously(ctx context.Context, wg *sync.WaitGroup, totalViewers int, kickService *kick.Service, channelID int, log *logrus.Logger) {
+	for i := 0; i < totalViewers; i++ {
+		wg.Add(1)
+		go startConnection(ctx, wg, i, kickService, channelID, log)
+	}
+}
+
+// startConnection handles a single connection (extracted from original code)
+func startConnection(ctx context.Context, wg *sync.WaitGroup, index int, kickService *kick.Service, channelID int, log *logrus.Logger) {
+	defer wg.Done()
+
+	// Get token for this connection
+	token, proxyURL, err := kickService.GetToken()
+	if err != nil {
+		log.WithError(err).Errorf("[%d] Failed to get token", index)
+		return
+	}
+
+	log.Infof("[%d] Got token: %s using proxy: %s", index, token, proxyURL)
+
+	// Create connection handler
+	handler := kick.NewConnectionHandler(index, channelID, token, proxyURL, log)
+
+	// Start connection
+	if err := handler.Start(ctx); err != nil {
+		if err == context.Canceled {
+			log.Infof("[%d] Connection stopped due to shutdown", index)
+		} else {
+			log.WithError(err).Errorf("[%d] Connection failed", index)
+		}
+	}
 }
