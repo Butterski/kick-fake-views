@@ -1,5 +1,4 @@
 # Based on [python version](https://github.com/blazejszhxk/kick-viewbot) from [blazejszhxk](https://x.com/szhxk2)
-# KICK PLEASE HIRE ME AND BLAZEJ - WE CAN DO YOUR API BETTER
 # Kick Bot - Go Edition
 
 A Go-based bot for simulating viewers on Kick.com streams. This application creates multiple WebSocket connections to increase viewer count for specified channels.
