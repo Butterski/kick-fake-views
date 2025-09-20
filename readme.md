@@ -21,13 +21,23 @@ A Go-based bot for simulating viewers on Kick.com streams. This application crea
    ```
 
 2. **Build the application:**
+  (linux)
    ```bash
    go build -o kick-bot ./cmd/kick-bot
    ```
+   (windows)
+   ```bash
+   go build -o kick-bot.exe ./cmd/kick-bot
+   ```
 
-3. **Run the application:**
+4. **Run the application:**
+   (linux)
    ```bash
    ./kick-bot
+   ```
+   (windows)
+   ```bash
+   ./kick-bot.exe
    ```
 
 ### Method 2: Docker (Recommended)
@@ -66,7 +76,7 @@ The application supports several command-line flags to customize behavior:
 - `-no-dashboard`: Disable dashboard and use verbose logging instead (default: false)
 
 **Usage Examples:**
-
+(linux)
 ```bash
 # Default mode - all connections start simultaneously with clean dashboard
 ./kick-bot
@@ -82,6 +92,24 @@ The application supports several command-line flags to customize behavior:
 
 # Slow mode with verbose logging
 ./kick-bot -slow -no-dashboard -batch-size=25 -batch-delay=45
+```
+
+(windows)
+```bash
+# Default mode - all connections start simultaneously with clean dashboard
+./kick-bot.exe
+
+# Verbose logging mode (original behavior)
+./kick-bot.exe -no-dashboard
+
+# Slow mode with default settings (100 connections per batch, 30s delay)
+./kick-bot.exe -slow
+
+# Custom batch processing with dashboard
+./kick-bot.exe -slow -batch-size=50 -batch-delay=15
+
+# Slow mode with verbose logging
+./kick-bot.exe -slow -no-dashboard -batch-size=25 -batch-delay=45
 ```
 
 **Dashboard vs Verbose Logging:**
