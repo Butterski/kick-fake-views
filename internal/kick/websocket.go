@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"time"
 
+	"kick-bot/internal/dashboard"
+
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 )
@@ -70,6 +72,39 @@ func (ch *ConnectionHandler) Start(ctx context.Context) error {
 
 		// If connection successful, start message loop
 		return ch.messageLoop(ctx)
+	}
+
+	return fmt.Errorf("failed to establish connection after %d attempts", maxRetries)
+}
+
+// StartWithDashboard begins the websocket connection with dashboard updates
+func (ch *ConnectionHandler) StartWithDashboard(ctx context.Context, dash *dashboard.Dashboard) error {
+	maxRetries := 5
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Update dashboard with current attempt
+		dash.UpdateConnection(ch.index, dashboard.StatusConnecting, attempt, "")
+
+		if err := ch.connect(); err != nil {
+			// Update dashboard with retry status
+			dash.UpdateConnection(ch.index, dashboard.StatusRetrying, attempt, err.Error())
+
+			// Wait before retrying
+			retryDelay := time.Duration(4+rand.Intn(5)) * time.Second
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(retryDelay):
+				continue
+			}
+		}
+
+		// Connection successful, update dashboard
+		dash.UpdateConnection(ch.index, dashboard.StatusConnected, attempt, "")
+
+		// Start message loop
+		return ch.messageLoopWithDashboard(ctx, dash)
 	}
 
 	return fmt.Errorf("failed to establish connection after %d attempts", maxRetries)
@@ -167,6 +202,63 @@ func (ch *ConnectionHandler) messageLoop(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			ch.logger.Infof("[%d] Context cancelled during delay", ch.index)
+			return ctx.Err()
+		case <-time.After(delay):
+			// Continue to next iteration
+		}
+	}
+}
+
+// messageLoopWithDashboard handles the ping/handshake message cycle with dashboard updates
+func (ch *ConnectionHandler) messageLoopWithDashboard(ctx context.Context, dash *dashboard.Dashboard) error {
+	defer func() {
+		if ch.conn != nil {
+			ch.conn.Close()
+		}
+	}()
+
+	counter := 0
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		counter++
+
+		var message WebSocketMessage
+
+		if counter%2 == 0 {
+			// Send ping message
+			message = WebSocketMessage{
+				Type: "ping",
+			}
+		} else {
+			// Send handshake message
+			handshakeData := HandshakeData{}
+			handshakeData.Message.ChannelID = ch.channelID
+
+			message = WebSocketMessage{
+				Type: "channel_handshake",
+				Data: handshakeData,
+			}
+		}
+
+		// Send message
+		if err := ch.conn.WriteJSON(message); err != nil {
+			// Update dashboard with error
+			dash.UpdateConnection(ch.index, dashboard.StatusFailed, 1, "Message send failed: "+err.Error())
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+
+		// Calculate random delay (11-18 seconds)
+		delay := time.Duration(11+rand.Intn(8)) * time.Second
+
+		// Wait for the delay or context cancellation
+		select {
+		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(delay):
 			// Continue to next iteration

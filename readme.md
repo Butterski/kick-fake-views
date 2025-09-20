@@ -61,24 +61,32 @@ The application supports several command-line flags to customize behavior:
 
 **Available Options:**
 - `-slow`: Enable slow mode with batch processing and delays (default: false)
-- `-batch-size`: Number of connections to start per batch (default: 10)
+- `-batch-size`: Number of connections to start per batch (default: 100)
 - `-batch-delay`: Delay in seconds between batches (default: 30)
+- `-no-dashboard`: Disable dashboard and use verbose logging instead (default: false)
 
 **Usage Examples:**
 
 ```bash
-# Default mode - all connections start simultaneously (fastest)
+# Default mode - all connections start simultaneously with clean dashboard
 ./kick-bot
 
-# Slow mode with default settings (10 connections per batch, 30s delay)
+# Verbose logging mode (original behavior)
+./kick-bot -no-dashboard
+
+# Slow mode with default settings (100 connections per batch, 30s delay)
 ./kick-bot -slow
 
-# Custom batch processing (5 connections per batch, 60s delay)
-./kick-bot -slow -batch-size=5 -batch-delay=60
-
-# Large batch with shorter delay (50 connections per batch, 15s delay)
+# Custom batch processing with dashboard
 ./kick-bot -slow -batch-size=50 -batch-delay=15
+
+# Slow mode with verbose logging
+./kick-bot -slow -no-dashboard -batch-size=25 -batch-delay=45
 ```
+
+**Dashboard vs Verbose Logging:**
+- **Dashboard mode (default)**: Clean real-time status display with connection statistics
+- **Verbose mode (`-no-dashboard`)**: Traditional detailed logging with individual connection messages
 
 **When to use slow mode:**
 - To avoid overwhelming the target server
@@ -119,13 +127,38 @@ kick-bot/
 
 ## Features
 
+- **Real-time Dashboard**: Clean status display with connection statistics and progress tracking
 - **Structured Logging**: JSON and text formatters with different log levels
+- **Batch Processing**: Control connection startup rate with customizable batching
 - **Proxy Management**: Automatic proxy rotation and error handling
 - **WebSocket Connections**: Maintains persistent connections with ping/handshake cycles
 - **Graceful Shutdown**: Handles SIGINT/SIGTERM for clean application termination
 - **Concurrent Connections**: Uses goroutines for handling multiple simultaneous connections
 - **Error Recovery**: Automatic retry logic for failed connections and requests
 - **Docker Support**: Multi-stage builds for optimal container size
+
+### Dashboard Features
+
+The new dashboard provides:
+- **Real-time Statistics**: Live connection counts, success rates, and runtime info
+- **Clean Interface**: No more cluttered terminal output with individual connection logs
+- **Status Tracking**: Visual indicators for connecting, connected, retrying, and failed states
+- **Recent Activity**: Shows the latest connection status changes
+- **Progress Monitoring**: Success rate calculation and total attempt tracking
+
+Example dashboard display:
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              KICK BOT DASHBOARD                              ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ Channel: xQc                 │ Channel ID: 621      │ Runtime: 02:34         ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ Total Connections: 1000      │ Success Rate: 85.3%  │ Total Attempts: 1247   ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ 🟢 Connected: 853           │ 🟡 Connecting: 23     │ 🔄 Retrying: 77        ║
+║ 🔴 Failed: 47               │ Last Update: 14:23:45                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 ## How It Works
 
