@@ -13,11 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	"kick-bot/internal/dashboard"
 	"kick-bot/internal/kick"
 	"kick-bot/internal/logger"
 	"kick-bot/internal/proxy"
-	"kick-bot/internal/dashboard"
-	
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,10 +30,10 @@ const (
 func main() {
 	// Define command line flags
 	var (
-		batchSize    = flag.Int("batch-size", defaultBatchSize, "Number of connections to start per batch")
-		batchDelay   = flag.Int("batch-delay", defaultBatchDelay, "Delay in seconds between batches")
-		slowMode     = flag.Bool("slow", false, "Enable slow mode with batch processing and delays")
-		noDashboard  = flag.Bool("no-dashboard", false, "Disable dashboard and use verbose logging instead")
+		batchSize   = flag.Int("batch-size", defaultBatchSize, "Number of connections to start per batch")
+		batchDelay  = flag.Int("batch-delay", defaultBatchDelay, "Delay in seconds between batches")
+		slowMode    = flag.Bool("slow", false, "Enable slow mode with batch processing and delays")
+		noDashboard = flag.Bool("no-dashboard", false, "Disable dashboard and use verbose logging instead")
 	)
 	flag.Parse()
 
@@ -44,7 +44,7 @@ func main() {
 	} else {
 		log.SetLevel(logrus.WarnLevel) // Only show warnings and errors in background
 	}
-	
+
 	if *slowMode && *noDashboard {
 		log.Infof("Slow mode enabled: batch size=%d, delay=%ds", *batchSize, *batchDelay)
 	}
@@ -135,7 +135,7 @@ func main() {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
-	
+
 	// Final summary
 	if !*noDashboard && dash != nil {
 		stats := dash.GetStats()
@@ -153,7 +153,7 @@ func main() {
 // startConnectionsInBatches starts connections in batches with delays between them
 func startConnectionsInBatches(ctx context.Context, wg *sync.WaitGroup, totalViewers, batchSize, batchDelaySeconds int, kickService *kick.Service, channelID int, log *logrus.Logger, dash *dashboard.Dashboard, noDashboard bool) {
 	batchDelay := time.Duration(batchDelaySeconds) * time.Second
-	
+
 	for i := 0; i < totalViewers; i += batchSize {
 		// Check if context is cancelled before starting a new batch
 		select {
@@ -184,7 +184,7 @@ func startConnectionsInBatches(ctx context.Context, wg *sync.WaitGroup, totalVie
 			if noDashboard {
 				log.Infof("Waiting %d seconds before next batch...", batchDelaySeconds)
 			}
-			
+
 			// Use a timer with context cancellation support
 			timer := time.NewTimer(batchDelay)
 			select {
@@ -203,12 +203,12 @@ func startAllConnectionsSimultaneously(ctx context.Context, wg *sync.WaitGroup, 
 	if noDashboard {
 		log.Infof("Starting %d viewer connections...", totalViewers)
 	}
-	
+
 	for i := 0; i < totalViewers; i++ {
 		wg.Add(1)
 		go startConnection(ctx, wg, i, kickService, channelID, log, dash, noDashboard)
 	}
-}// startConnection handles a single connection (extracted from original code)
+} // startConnection handles a single connection (extracted from original code)
 func startConnection(ctx context.Context, wg *sync.WaitGroup, index int, kickService *kick.Service, channelID int, log *logrus.Logger, dash *dashboard.Dashboard, noDashboard bool) {
 	defer wg.Done()
 
